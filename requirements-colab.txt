@@ -1,0 +1,4 @@
+-r requirements.txt
+
+# 4-bit quantization (Linux/Colab only)
+bitsandbytes==0.46.1
