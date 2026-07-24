@@ -2,31 +2,27 @@
 Dataset loader for MultiTask-CodePilot.
 """
 
-import json
-from torch.utils.data import Dataset
+from datasets import load_dataset
 
 from training.prompts import build_prompt
 
 
-class MultiTaskDataset(Dataset):
+def load_training_dataset(dataset_path):
+    """
+    Load JSONL dataset and convert each record into a training prompt.
+    """
 
-    def __init__(self, dataset_path):
+    dataset = load_dataset(
+        "json",
+        data_files=str(dataset_path),
+        split="train",
+    )
 
-        self.records = []
+    print(f"Loaded {len(dataset):,} training samples.")
 
-        with open(dataset_path, "r", encoding="utf-8") as f:
-            for line in f:
-                self.records.append(json.loads(line))
-                
-        print(f"Loaded {len(self.records):,} training samples.")
+    dataset = dataset.map(
+        lambda record: {"text": build_prompt(record)},
+        remove_columns=dataset.column_names,
+    )
 
-    def __len__(self):
-        return len(self.records)
-
-    def __getitem__(self, idx):
-
-        record = self.records[idx]
-
-        return {
-            "text": build_prompt(record)
-        }
+    return dataset

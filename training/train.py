@@ -23,7 +23,7 @@ from training.config import (
     REPORT_TO,
 )
 
-from training.dataset import MultiTaskDataset
+from training.dataset import load_training_dataset
 from training.model import load_model
 
 
@@ -43,7 +43,7 @@ def main():
     # Load dataset
     # --------------------------------------------------
 
-    dataset = MultiTaskDataset(DATASET_PATH)
+    dataset = load_training_dataset(DATASET_PATH)
 
     print(f"Dataset Size : {len(dataset):,}")
 
