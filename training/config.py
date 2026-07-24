@@ -8,7 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent
 
 DATASET_PATH = PROJECT_ROOT / "datasets" / "processed" / "unified_dataset.jsonl"
 
-OUTPUT_DIR = PROJECT_ROOT / "outputs" / "qwen_multitask_lora"
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # =====================================================
 # Model
