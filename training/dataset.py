@@ -17,6 +17,8 @@ class MultiTaskDataset(Dataset):
         with open(dataset_path, "r", encoding="utf-8") as f:
             for line in f:
                 self.records.append(json.loads(line))
+                
+        print(f"Loaded {len(self.records):,} training samples.")
 
     def __len__(self):
         return len(self.records)

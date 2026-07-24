@@ -1,173 +1,117 @@
 """
-Load Qwen model and apply QLoRA.
+Train MultiTask-CodePilot using QLoRA.
 """
 
-import torch
-
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    BitsAndBytesConfig,
-)
-
-from peft import (
-    LoraConfig,
-    get_peft_model,
-    prepare_model_for_kbit_training,
-)
+from transformers import TrainingArguments
+from trl import SFTTrainer
 
 from training.config import (
-    MODEL_NAME,
-    LORA_R,
-    LORA_ALPHA,
-    LORA_DROPOUT,
-    LORA_TARGET_MODULES,
+    DATASET_PATH,
+    OUTPUT_DIR,
+    NUM_EPOCHS,
+    LEARNING_RATE,
+    BATCH_SIZE,
+    GRADIENT_ACCUMULATION_STEPS,
+    WARMUP_RATIO,
+    WEIGHT_DECAY,
+    LOGGING_STEPS,
+    SAVE_STEPS,
+    SAVE_TOTAL_LIMIT,
+    FP16,
+    BF16,
+    SEED,
+    REPORT_TO,
 )
 
+from training.dataset import MultiTaskDataset
+from training.model import load_model
 
-def load_model():
 
-    print(f"\nLoading tokenizer: {MODEL_NAME}")
+def main():
 
-    tokenizer = AutoTokenizer.from_pretrained(
-        MODEL_NAME,
-        trust_remote_code=True,
-    )
-
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
-
-    print("Tokenizer loaded.")
+    print("=" * 60)
+    print("MultiTask-CodePilot Training")
+    print("=" * 60)
 
     # --------------------------------------------------
-    # 4-bit Quantization Configuration
+    # Load model & tokenizer
     # --------------------------------------------------
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
-    )
-
-    print("\nLoading base model...")
-
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
-        quantization_config=bnb_config,
-        device_map="auto",
-        trust_remote_code=True,
-    )
-
-    print("Base model loaded.")
+    model, tokenizer = load_model()
 
     # --------------------------------------------------
-    # Prepare for QLoRA
+    # Load dataset
     # --------------------------------------------------
 
-    model = prepare_model_for_kbit_training(model)
+    dataset = MultiTaskDataset(DATASET_PATH)
 
-    """
-Load Qwen model and apply QLoRA.
-"""
-
-import torch
-
-from transformers import (
-    AutoTokenizer,
-    AutoModelForCausalLM,
-    BitsAndBytesConfig,
-)
-
-from peft import (
-    LoraConfig,
-    get_peft_model,
-    prepare_model_for_kbit_training,
-)
-
-from training.config import (
-    MODEL_NAME,
-    LORA_R,
-    LORA_ALPHA,
-    LORA_DROPOUT,
-    LORA_TARGET_MODULES,
-)
-
-
-def load_model():
-
-    print(f"\nLoading tokenizer: {MODEL_NAME}")
-
-    tokenizer = AutoTokenizer.from_pretrained(
-        MODEL_NAME,
-        trust_remote_code=True,
-    )
-
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.padding_side = "right"
-
-    print("Tokenizer loaded.")
+    print(f"Dataset Size : {len(dataset):,}")
 
     # --------------------------------------------------
-    # 4-bit Quantization Configuration
+    # Training Arguments
     # --------------------------------------------------
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16,
-        bnb_4bit_use_double_quant=True,
+    training_args = TrainingArguments(
+        output_dir=str(OUTPUT_DIR),
+
+        num_train_epochs=NUM_EPOCHS,
+
+        per_device_train_batch_size=BATCH_SIZE,
+        gradient_accumulation_steps=GRADIENT_ACCUMULATION_STEPS,
+
+        learning_rate=LEARNING_RATE,
+        warmup_ratio=WARMUP_RATIO,
+        weight_decay=WEIGHT_DECAY,
+
+        logging_steps=LOGGING_STEPS,
+
+        save_steps=SAVE_STEPS,
+        save_total_limit=SAVE_TOTAL_LIMIT,
+
+        fp16=FP16,
+        bf16=BF16,
+
+        optim="paged_adamw_8bit",
+
+        lr_scheduler_type="cosine",
+
+        report_to=REPORT_TO,
+
+        seed=SEED,
+
+        remove_unused_columns=False,
     )
-
-    print("\nLoading base model...")
-
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_NAME,
-        quantization_config=bnb_config,
-        device_map="auto",
-        trust_remote_code=True,
-    )
-
-    print("Base model loaded.")
 
     # --------------------------------------------------
-    # Prepare for QLoRA
+    # Trainer
     # --------------------------------------------------
 
-    model = prepare_model_for_kbit_training(model)
-
-    model.gradient_checkpointing_enable()
-
-    lora_config = LoraConfig(
-        r=LORA_R,
-        lora_alpha=LORA_ALPHA,
-        lora_dropout=LORA_DROPOUT,
-        target_modules=LORA_TARGET_MODULES,
-        bias="none",
-        task_type="CAUSAL_LM",
+    trainer = SFTTrainer(
+        model=model,
+        args=training_args,
+        train_dataset=dataset,
+        processing_class=tokenizer,
     )
 
-    model = get_peft_model(model, lora_config)
+    # --------------------------------------------------
+    # Train
+    # --------------------------------------------------
 
-    print("\nTrainable Parameters")
+    print("\nStarting Training...\n")
 
-    model.print_trainable_parameters()
+    trainer.train()
 
-    return model, tokenizer
+    # --------------------------------------------------
+    # Save
+    # --------------------------------------------------
 
-    lora_config = LoraConfig(
-        r=LORA_R,
-        lora_alpha=LORA_ALPHA,
-        lora_dropout=LORA_DROPOUT,
-        target_modules=LORA_TARGET_MODULES,
-        bias="none",
-        task_type="CAUSAL_LM",
-    )
+    print("\nSaving LoRA Adapter...")
 
-    model = get_peft_model(model, lora_config)
+    trainer.save_model(str(OUTPUT_DIR))
+    tokenizer.save_pretrained(str(OUTPUT_DIR))
 
-    print("\nTrainable Parameters")
+    print("\nTraining completed successfully!")
 
-    model.print_trainable_parameters()
 
-    return model, tokenizer
+if __name__ == "__main__":
+    main()
