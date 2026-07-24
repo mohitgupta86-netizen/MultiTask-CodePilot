@@ -3,6 +3,7 @@ Train MultiTask-CodePilot using QLoRA.
 """
 
 from transformers import TrainingArguments
+from trl import SFTTrainer, SFTConfig
 from trl import SFTTrainer
 
 from training.config import (
@@ -71,7 +72,7 @@ def main():
         fp16=FP16,
         bf16=BF16,
 
-        optim="paged_adamw_8bit",
+       optim="adamw_torch",
 
         lr_scheduler_type="cosine",
 
