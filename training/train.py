@@ -72,7 +72,7 @@ def main():
         fp16=FP16,
         bf16=BF16,
 
-       optim="adamw_torch",
+        optim="adamw_torch",
 
         lr_scheduler_type="cosine",
 
