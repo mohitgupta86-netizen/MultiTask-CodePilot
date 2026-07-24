@@ -69,8 +69,8 @@ def main():
         save_steps=SAVE_STEPS,
         save_total_limit=SAVE_TOTAL_LIMIT,
 
-        fp16=FP16,
-        bf16=BF16,
+        fp16=False,
+        bf16=False,
 
         optim="adamw_torch",
 
