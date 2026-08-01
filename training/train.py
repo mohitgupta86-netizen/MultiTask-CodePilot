@@ -5,6 +5,7 @@ Train MultiTask-CodePilot using QLoRA.
 from transformers import TrainingArguments
 from trl import SFTTrainer, SFTConfig
 from trl import SFTTrainer
+from training.config import NUM_WORKERS
 
 from training.config import (
     DATASET_PATH,
@@ -81,6 +82,9 @@ def main():
         seed=SEED,
 
         remove_unused_columns=False,
+
+        dataloader_num_workers=NUM_WORKERS,
+        dataloader_pin_memory=True,
     )
 
     # --------------------------------------------------

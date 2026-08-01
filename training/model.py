@@ -72,7 +72,11 @@ def load_model():
     )
 
     model.config.use_cache = False
-    model.gradient_checkpointing_enable()
+    model.gradient_checkpointing_enable(
+    gradient_checkpointing_kwargs={
+        "use_reentrant": False
+    }
+)
 
     print("✓ Base model loaded")
 
