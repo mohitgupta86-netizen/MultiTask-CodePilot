@@ -2,9 +2,7 @@
 Train MultiTask-CodePilot using QLoRA.
 """
 
-from transformers import TrainingArguments
 from trl import SFTTrainer, SFTConfig
-from trl import SFTTrainer
 from training.config import NUM_WORKERS
 
 from training.config import (
@@ -53,7 +51,7 @@ def main():
     # Training Arguments
     # --------------------------------------------------
 
-    training_args = TrainingArguments(
+    training_args = SFTConfig(
         output_dir=str(OUTPUT_DIR),
 
         num_train_epochs=NUM_EPOCHS,
